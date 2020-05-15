@@ -9,7 +9,7 @@ namespace StatsdClient
         private StatsBufferize _statsBufferize;
 
         public StatsdData(
-            Statsd statsd,
+            Statsd2 statsd,
             StatsBufferize statsBufferize,
             StatsSender statsSender,
             Telemetry telemetry)
@@ -20,7 +20,7 @@ namespace StatsdClient
             _statsSender = statsSender;
         }
 
-        public Statsd Statsd { get; private set; }
+        public Statsd2 Statsd { get; private set; }
 
         public Telemetry Telemetry { get; private set; }
 

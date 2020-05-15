@@ -7,9 +7,9 @@ namespace StatsdClient.Bufferize
     /// <summary>
     /// StatsBufferize bufferizes metrics before sending them.
     /// </summary>
-    internal class StatsBufferize : IStatsdUDP, IDisposable
+    internal class StatsBufferize : IDisposable
     {
-        private readonly AsynchronousWorker<string> _worker;
+        private readonly AsynchronousWorker<ArraySegment<byte>> _worker;
         private readonly Telemetry _telemetry;
 
         public StatsBufferize(
@@ -24,7 +24,7 @@ namespace StatsdClient.Bufferize
             var handler = new WorkerHandler(bufferBuilder, maxIdleWaitBeforeSending);
 
             // `handler` (and also `bufferBuilder`) do not need to be thread safe as long as workerMaxItemCount is 1.
-            this._worker = new AsynchronousWorker<string>(
+            this._worker = new AsynchronousWorker<ArraySegment<byte>>(
                 handler,
                 new Waiter(),
                 1,
@@ -32,11 +32,12 @@ namespace StatsdClient.Bufferize
                 blockingQueueTimeout);
         }
 
-        public void Send(string command)
-        {
+        public void Send(ArraySegment<byte> command)
+        {                    
             if (!this._worker.TryEnqueue(command))
             {
                 _telemetry.OnPacketsDroppedQueue();
+                Statsd2.Poll.Enqueue(command.Array);
             }
         }
 
@@ -50,7 +51,7 @@ namespace StatsdClient.Bufferize
             throw new NotSupportedException();
         }
 
-        private class WorkerHandler : IAsynchronousWorkerHandler<string>
+        private class WorkerHandler : IAsynchronousWorkerHandler<ArraySegment<byte>>
         {
             private readonly BufferBuilder _bufferBuilder;
             private readonly TimeSpan _maxIdleWaitBeforeSending;
@@ -62,13 +63,13 @@ namespace StatsdClient.Bufferize
                 _maxIdleWaitBeforeSending = maxIdleWaitBeforeSending;
             }
 
-            public void OnNewValue(string metric)
+            public void OnNewValue(ArraySegment<byte> metric)
             {
                 if (!_bufferBuilder.Add(metric))
                 {
                     throw new InvalidOperationException($"The metric size exceeds the buffer capacity: {metric}");
                 }
-
+                Statsd2.Poll.Enqueue(metric.Array);                
                 _stopwatch = null;
             }
 

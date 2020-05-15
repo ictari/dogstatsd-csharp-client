@@ -22,7 +22,7 @@ namespace StatsdClient
         /// latency (When <see cref="MaxBlockDuration"/> is null) or the number of messages
         /// dropped (When <see cref="MaxBlockDuration"/> is not null).
         /// </summary>
-        public int MaxMetricsInAsyncQueue { get; set; } = 100 * 1000;
+        public int MaxMetricsInAsyncQueue { get; set; } = 10 * 1000;
 
         /// <summary>
         /// Gets or sets a value defining the maximum duration a call can block.

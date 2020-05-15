@@ -36,11 +36,11 @@ namespace StatsdClient.Bufferize
             return _encoding.GetBytes(message);
         }
 
-        public bool Add(string value)
+        public bool Add(ArraySegment<byte> value)
         {
-            var byteCount = _encoding.GetByteCount(value);
+            var byteCount = value.Count;
 
-            if (byteCount > Capacity)
+            if (value.Count > Capacity)
             {
                 return false;
             }
@@ -61,8 +61,9 @@ namespace StatsdClient.Bufferize
                 Length += _separator.Length;
             }
 
+            Array.Copy(value.Array, value.Offset, _buffer, Length, value.Count);
             // GetBytes requires the buffer to be big enough otherwise it throws, that is why we use GetByteCount.
-            Length += _encoding.GetBytes(value, 0, value.Length, _buffer, Length);
+            Length += value.Count;
             return true;
         }
 

@@ -44,11 +44,11 @@ namespace StatsdClient
                 statsSenderData.Sender,
                 statsSenderData.BufferCapacity,
                 config.Advanced);
-            var statsD = new Statsd(
+            var statsD = new Statsd2(
                 statsBufferize,
                 new RandomGenerator(),
                 new StopWatchFactory(),
-                string.Empty,
+                config.Prefix,
                 config.ConstantTags,
                 telemetry);
             statsD.TruncateIfTooLong = config.StatsdTruncateIfTooLong;

@@ -10,9 +10,9 @@ namespace StatsdClient
     public class DogStatsdService : IDogStatsd, IDisposable
     {
         private StatsdBuilder _statsdBuilder = new StatsdBuilder(new StatsBufferizeFactory());
-        private Statsd _statsD;
+        private Statsd2 _statsD;
         private StatsdData _statsdData;
-        private string _prefix;
+        //private string _prefix;
         private StatsdConfig _config;
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace StatsdClient
             }
 
             _config = config;
-            _prefix = config.Prefix;
+            //_prefix = config.Prefix;
 
             _statsdData = _statsdBuilder.BuildStatsData(config);
             _statsD = _statsdData.Statsd;
@@ -77,7 +77,7 @@ namespace StatsdClient
         /// <typeparam name="T">The type of the value.</typeparam>
         public void Counter<T>(string statName, T value, double sampleRate = 1.0, string[] tags = null)
         {
-            _statsD?.Send<Statsd.Counting, T>(BuildNamespacedStatName(statName), value, sampleRate, tags);
+            _statsD?.Send<Statsd2.Counting, T>(statName, value, sampleRate, tags);
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace StatsdClient
         /// <param name="tags">Array of tags to be added to the data.</param>
         public void Increment(string statName, int value = 1, double sampleRate = 1.0, string[] tags = null)
         {
-            _statsD?.Send<Statsd.Counting, int>(BuildNamespacedStatName(statName), value, sampleRate, tags);
+            _statsD?.Send<Statsd2.Counting, int>(statName, value, sampleRate, tags);
         }
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace StatsdClient
         /// <param name="tags">Array of tags to be added to the data.</param>
         public void Decrement(string statName, int value = 1, double sampleRate = 1.0, string[] tags = null)
         {
-            _statsD?.Send<Statsd.Counting, int>(BuildNamespacedStatName(statName), -value, sampleRate, tags);
+            _statsD?.Send<Statsd2.Counting, int>(statName, -value, sampleRate, tags);
         }
 
         /// <summary>
@@ -114,7 +114,7 @@ namespace StatsdClient
         /// <typeparam name="T">The type of the value.</typeparam>
         public void Gauge<T>(string statName, T value, double sampleRate = 1.0, string[] tags = null)
         {
-            _statsD?.Send<Statsd.Gauge, T>(BuildNamespacedStatName(statName), value, sampleRate, tags);
+            _statsD?.Send<Statsd2.Gauge, T>(statName, value, sampleRate, tags);
         }
 
         /// <summary>
@@ -127,7 +127,7 @@ namespace StatsdClient
         /// <typeparam name="T">The type of the value.</typeparam>
         public void Histogram<T>(string statName, T value, double sampleRate = 1.0, string[] tags = null)
         {
-            _statsD?.Send<Statsd.Histogram, T>(BuildNamespacedStatName(statName), value, sampleRate, tags);
+            _statsD?.Send<Statsd2.Histogram, T>(statName, value, sampleRate, tags);
         }
 
         /// <summary>
@@ -140,7 +140,7 @@ namespace StatsdClient
         /// <typeparam name="T">The type of the value.</typeparam>
         public void Distribution<T>(string statName, T value, double sampleRate = 1.0, string[] tags = null)
         {
-            _statsD?.Send<Statsd.Distribution, T>(BuildNamespacedStatName(statName), value, sampleRate, tags);
+            _statsD?.Send<Statsd2.Distribution, T>(statName, value, sampleRate, tags);
         }
 
         /// <summary>
@@ -153,7 +153,7 @@ namespace StatsdClient
         /// <typeparam name="T">The type of the value.</typeparam>
         public void Set<T>(string statName, T value, double sampleRate = 1.0, string[] tags = null)
         {
-            _statsD?.Send<Statsd.Set, T>(BuildNamespacedStatName(statName), value, sampleRate, tags);
+            _statsD?.Send<Statsd2.Set, T>(statName, value, sampleRate, tags);
         }
 
         /// <summary>
@@ -166,7 +166,7 @@ namespace StatsdClient
         /// <typeparam name="T">The type of value parameter.</typeparam>
         public void Timer<T>(string statName, T value, double sampleRate = 1.0, string[] tags = null)
         {
-            _statsD?.Send<Statsd.Timing, T>(BuildNamespacedStatName(statName), value, sampleRate, tags);
+            _statsD?.Send<Statsd2.Timing, T>(statName, value, sampleRate, tags);
         }
 
         /// <summary>
@@ -196,7 +196,7 @@ namespace StatsdClient
             }
             else
             {
-                _statsD.Send(action, BuildNamespacedStatName(statName), sampleRate, tags);
+                _statsD.Send(action, statName, sampleRate, tags);
             }
         }
 
@@ -241,19 +241,22 @@ namespace StatsdClient
         /// Flushes all metrics.
         /// </summary>
         public void Dispose()
-        {
+        {            
             _statsdData?.Dispose();
             _statsdData = null;
+            Console.WriteLine("Nb Alloc: {0}", Statsd2.nbAlloc);
+            Console.WriteLine("Nb Alloc: {0}", Statsd2.Poll.Count);
+
         }
 
-        private string BuildNamespacedStatName(string statName)
-        {
-            if (string.IsNullOrEmpty(_prefix))
-            {
-                return statName;
-            }
+        // private string BuildNamespacedStatName(string statName)
+        // {
+        //     if (string.IsNullOrEmpty(_prefix))
+        //     {
+        //         return statName;
+        //     }
 
-            return _prefix + "." + statName;
-        }
+        //     return _prefix + "." + statName;
+        // }
     }
 }
