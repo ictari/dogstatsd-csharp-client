@@ -17,17 +17,17 @@ namespace StatsdClient
             _constantTags = constantTags?.ToArray() ?? Array.Empty<string>();
         }
 
-        public string SerializeEvent(string title, string text, string alertType = null, string aggregationKey = null, string sourceType = null, int? dateHappened = null, string priority = null, string hostname = null, string[] tags = null, bool truncateIfTooLong = false)
+        public RawMetric SerializeEvent(string title, string text, string alertType = null, string aggregationKey = null, string sourceType = null, int? dateHappened = null, string priority = null, string hostname = null, string[] tags = null, bool truncateIfTooLong = false)
         {
             return Event.GetCommand(title, text, alertType, aggregationKey, sourceType, dateHappened, priority, hostname, _constantTags, tags, truncateIfTooLong);
         }
 
-        public string SerializeServiceCheck(string name, int status, int? timestamp = null, string hostname = null, string[] tags = null, string serviceCheckMessage = null, bool truncateIfTooLong = false)
+        public RawMetric SerializeServiceCheck(string name, int status, int? timestamp = null, string hostname = null, string[] tags = null, string serviceCheckMessage = null, bool truncateIfTooLong = false)
         {
             return ServiceCheck.GetCommand(name, status, timestamp, hostname, _constantTags, tags, serviceCheckMessage, truncateIfTooLong);
         }
 
-        public string SerializeMetric<T>(MetricType metricType, string name, T value, double sampleRate = 1.0, string[] tags = null)
+        public RawMetric SerializeMetric<T>(MetricType metricType, string name, T value, double sampleRate = 1.0, string[] tags = null)
         {
             return Metric.GetCommand(metricType, _prefix, name, value, sampleRate, _constantTags, tags);
         }
@@ -73,20 +73,20 @@ namespace StatsdClient
                                                                     { MetricType.Set, "s" },
                                                                 };
 
-            public static string GetCommand<T>(MetricType metricType, string prefix, string name, T value, double sampleRate, string[] constantTags, string[] tags)
+            public static RawMetric GetCommand<T>(MetricType metricType, string prefix, string name, T value, double sampleRate, string[] constantTags, string[] tags)
             {
                 string full_name = prefix + name;
                 string unit = _commandToUnit[metricType];
                 var allTags = ConcatTags(constantTags, tags);
 
-                return string.Format(
+                return new RawMetric(string.Format(
                     CultureInfo.InvariantCulture,
                     "{0}:{1}|{2}{3}{4}",
                     full_name,
                     value,
                     unit,
                     sampleRate == 1.0 ? string.Empty : string.Format(CultureInfo.InvariantCulture, "|@{0}", sampleRate),
-                    allTags);
+                    allTags));
             }
         }
 
@@ -94,12 +94,12 @@ namespace StatsdClient
         {
             private const int MaxSize = 8 * 1024;
 
-            public static string GetCommand(string title, string text, string alertType, string aggregationKey, string sourceType, int? dateHappened, string priority, string hostname, string[] tags, bool truncateIfTooLong = false)
+            public static RawMetric GetCommand(string title, string text, string alertType, string aggregationKey, string sourceType, int? dateHappened, string priority, string hostname, string[] tags, bool truncateIfTooLong = false)
             {
                 return GetCommand(title, text, alertType, aggregationKey, sourceType, dateHappened, priority, hostname, null, tags, truncateIfTooLong);
             }
 
-            public static string GetCommand(string title, string text, string alertType, string aggregationKey, string sourceType, int? dateHappened, string priority, string hostname, string[] constantTags, string[] tags, bool truncateIfTooLong = false)
+            public static RawMetric GetCommand(string title, string text, string alertType, string aggregationKey, string sourceType, int? dateHappened, string priority, string hostname, string[] constantTags, string[] tags, bool truncateIfTooLong = false)
             {
                 string processedTitle = EscapeContent(title);
                 string processedText = EscapeContent(text);
@@ -158,7 +158,7 @@ namespace StatsdClient
                     }
                 }
 
-                return result;
+                return new RawMetric(result);
             }
         }
 
@@ -166,12 +166,12 @@ namespace StatsdClient
         {
             private const int MaxSize = 8 * 1024;
 
-            public static string GetCommand(string name, int status, int? timestamp, string hostname, string[] tags, string serviceCheckMessage, bool truncateIfTooLong = false)
+            public static RawMetric GetCommand(string name, int status, int? timestamp, string hostname, string[] tags, string serviceCheckMessage, bool truncateIfTooLong = false)
             {
                 return GetCommand(name, status, timestamp, hostname, null, tags, serviceCheckMessage, truncateIfTooLong);
             }
 
-            public static string GetCommand(string name, int status, int? timestamp, string hostname, string[] constantTags, string[] tags, string serviceCheckMessage, bool truncateIfTooLong = false)
+            public static RawMetric GetCommand(string name, int status, int? timestamp, string hostname, string[] constantTags, string[] tags, string serviceCheckMessage, bool truncateIfTooLong = false)
             {
                 string processedName = EscapeName(name);
                 string processedMessage = EscapeMessage(serviceCheckMessage);
@@ -214,7 +214,7 @@ namespace StatsdClient
                     return GetCommand(name, status, timestamp, hostname, tags, truncMessage, true);
                 }
 
-                return result;
+                return new RawMetric(result);
             }
 
             // Service check name string, shouldn’t contain any |

@@ -52,7 +52,7 @@ namespace StatsdClient
             }
         }
 
-        public void Send(string command)
+        public void Send(RawMetric command)
         {
             _statsBufferize.Send(command);
         }
