@@ -12,7 +12,7 @@ namespace StatsdClient
 
         internal MetricSerializer(string prefix, string[] constantTags)
         {
-            _prefix = prefix;
+            _prefix = string.IsNullOrEmpty(prefix) ? string.Empty : prefix + ".";
             // copy array to prevent changes, coalesce to empty array
             _constantTags = constantTags?.ToArray() ?? Array.Empty<string>();
         }
