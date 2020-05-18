@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using StatsdClient.Bufferize;
 
 namespace StatsdClient
 {
@@ -13,10 +14,10 @@ namespace StatsdClient
         private readonly string _prefix;
         private readonly string[] _constantTags;
         private readonly Telemetry _optionalTelemetry;
-        private List<string> _commands = new List<string>();
+        private readonly StatsBufferize _statsBufferize;
 
         internal MetricsSender(
-                    IStatsdUDP udp,
+                    StatsBufferize statsBufferize,
                     IRandomGenerator randomGenerator,
                     IStopWatchFactory stopwatchFactory,
                     string prefix,
@@ -24,7 +25,7 @@ namespace StatsdClient
                     Telemetry optionalTelemetry)
         {
             StopwatchFactory = stopwatchFactory;
-            Udp = udp;
+            _statsBufferize = statsBufferize;
             RandomGenerator = randomGenerator;
             _prefix = prefix;
             _optionalTelemetry = optionalTelemetry;
@@ -45,15 +46,7 @@ namespace StatsdClient
 
         public bool TruncateIfTooLong { get; set; }
 
-        public List<string> Commands
-        {
-            get { return _commands; }
-            private set { _commands = value; }
-        }
-
         private IStopWatchFactory StopwatchFactory { get; set; }
-
-        private IStatsdUDP Udp { get; set; }
 
         private IRandomGenerator RandomGenerator { get; set; }
 
@@ -83,31 +76,7 @@ namespace StatsdClient
 
         public void Send(string command)
         {
-            try
-            {
-                // clear buffer (keep existing behavior)
-                if (Commands.Count > 0)
-                {
-                    Commands = new List<string>();
-                }
-
-                Udp.Send(command);
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.Message);
-            }
-        }
-
-        public void Send()
-        {
-            int count = Commands.Count;
-            if (count < 1)
-            {
-                return;
-            }
-
-            Send(count == 1 ? Commands[0] : string.Join("\n", Commands.ToArray()));
+            _statsBufferize.Send(command);
         }
 
         public void Send(Action actionToTime, string statName, double sampleRate = 1.0, string[] tags = null)
@@ -194,12 +163,6 @@ namespace StatsdClient
                                                                     { typeof(Meter), "m" },
                                                                     { typeof(Set), "s" },
                                                                 };
-
-            public static string GetCommand<TCommandType, T>(string prefix, string name, T value, double sampleRate, string[] tags)
-                where TCommandType : Metric
-            {
-                return GetCommand<TCommandType, T>(prefix, name, value, sampleRate, null, tags);
-            }
 
             public static string GetCommand<TCommandType, T>(string prefix, string name, T value, double sampleRate, string[] constantTags, string[] tags)
                 where TCommandType : Metric
