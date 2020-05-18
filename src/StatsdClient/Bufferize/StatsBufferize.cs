@@ -37,8 +37,8 @@ namespace StatsdClient.Bufferize
             if (!this._worker.TryEnqueue(command))
             {
                 _telemetry.OnPacketsDroppedQueue();
-                //Statsd2.Poll2.Enqueue(command.buffer);
-                Statsd2.Poll.Enqueue(command.buffer.Array);
+                Statsd2.Poll.Enqueue(command.buffer);
+                //Statsd2.Poll.Enqueue(command.buffer.Array);
             }
         }
 
@@ -70,8 +70,8 @@ namespace StatsdClient.Bufferize
                 {
                     throw new InvalidOperationException($"The metric size exceeds the buffer capacity: {metric}");
                 }
-                //Statsd2.Poll2.Enqueue(metric.buffer);                
-                Statsd2.Poll.Enqueue(metric.buffer.Array);                
+                Statsd2.Poll.Enqueue(metric.buffer);                
+                //Statsd2.Poll.Enqueue(metric.buffer.Array);                
                 _stopwatch = null;
             }
 

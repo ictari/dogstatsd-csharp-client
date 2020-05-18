@@ -36,12 +36,18 @@ namespace StatsdClient.Bufferize
             return _encoding.GetBytes(message);
         }
 
+        char[] buffChar = new char[8096];
+
         public bool Add(Message v)
         {
             var value = v.buffer;
-            var byteCount = value.Count;
+            
+            value.CopyTo(0, buffChar, 0, value.Length);
+            var byteCount = _encoding.GetByteCount(buffChar, 0, value.Length);
+                         
+            //var byteCount = value.Count;
 
-            if (value.Count > Capacity)
+            if (byteCount > Capacity)
             {
                 return false;
             }
@@ -62,9 +68,11 @@ namespace StatsdClient.Bufferize
                 Length += _separator.Length;
             }
 
-            Array.Copy(value.Array, value.Offset, _buffer, Length, value.Count);
-            // GetBytes requires the buffer to be big enough otherwise it throws, that is why we use GetByteCount.
-            Length += value.Count;
+            // Array.Copy(value.Array, value.Offset, _buffer, Length, byteCount);            
+            // Length += byteCount;
+
+            Length += _encoding.GetBytes(buffChar, 0, value.Length, _buffer, Length);
+
             return true;
         }
 

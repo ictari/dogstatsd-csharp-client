@@ -108,6 +108,7 @@ namespace StatsdClient
                     Commands = new List<string>();
                 }
                 Udp.Send(command);
+              
             }
             catch (Exception e)
             {
@@ -193,8 +194,8 @@ namespace StatsdClient
 
         public static int nbAlloc = 0;
 
-        public static readonly ConcurrentQueue<byte[]> Poll = new ConcurrentQueue<byte[]>();
-        public static readonly ConcurrentQueue<StringBuilder> Poll2 = new ConcurrentQueue<StringBuilder>();
+        //public static readonly ConcurrentQueue<byte[]> Poll = new ConcurrentQueue<byte[]>();
+        public static readonly ConcurrentQueue<StringBuilder> Poll = new ConcurrentQueue<StringBuilder>();
 
         public abstract class Metric : ICommandType
         {
@@ -242,84 +243,85 @@ namespace StatsdClient
                 return (nbDigit + offset) - start;
             }
 
-            public static Message GetCommand<TCommandType, T>(string prefix, string name, T value, double sampleRate, string[] constantTags, string[] tags)
+            public static Message GetCommand2<TCommandType, T>(string prefix, string name, T value, double sampleRate, string[] constantTags, string[] tags)
                 where TCommandType : Metric
             {
+                throw new NotImplementedException();
 
-                byte[] buffer = null;
-                if (!Poll.TryDequeue(out buffer))
-                {
+                // byte[] buffer = null;
+                // if (!Poll.TryDequeue(out buffer))
+                // {
 
-                    buffer = new byte[100];
-                    ++nbAlloc;
-                }
+                //     buffer = new byte[100];
+                //     ++nbAlloc;
+                // }
 
-                var enc = Encoding.UTF8;
-                var offset = 0;
+                // var enc = Encoding.UTF8;
+                // var offset = 0;
 
-                if (!String.IsNullOrEmpty(prefix))
-                {
-                    offset += enc.GetBytes(prefix, 0, prefix.Length, buffer, offset);
-                }
+                // if (!String.IsNullOrEmpty(prefix))
+                // {
+                //     offset += enc.GetBytes(prefix, 0, prefix.Length, buffer, offset);
+                // }
 
-                offset += enc.GetBytes(name, 0, name.Length, buffer, offset);
-                buffer[offset++] = (byte)':';
+                // offset += enc.GetBytes(name, 0, name.Length, buffer, offset);
+                // buffer[offset++] = (byte)':';
 
-                //  var valueStr = string.Format(CultureInfo.InvariantCulture, "{0}", value);
-                //  offset += enc.GetBytes(valueStr, 0, valueStr.Length, buffer, offset);
-                //offset += WriteToBuff(buffer, offset, Convert.ToInt32(value));
-                buffer[offset++] = (byte)'1';
+                // //  var valueStr = string.Format(CultureInfo.InvariantCulture, "{0}", value);
+                // //  offset += enc.GetBytes(valueStr, 0, valueStr.Length, buffer, offset);
+                // //offset += WriteToBuff(buffer, offset, Convert.ToInt32(value));
+                // buffer[offset++] = (byte)'1';
 
-                buffer[offset++] = (byte)'|';
+                // buffer[offset++] = (byte)'|';
 
-                string unit = _commandToUnit[typeof(TCommandType)];
-                offset += enc.GetBytes(unit, 0, unit.Length, buffer, offset);
+                // string unit = _commandToUnit[typeof(TCommandType)];
+                // offset += enc.GetBytes(unit, 0, unit.Length, buffer, offset);
 
-                if (sampleRate != 1.0)
-                {
-                    var smapleStr = string.Format(CultureInfo.InvariantCulture, "|@{0}", sampleRate);
-                    offset += enc.GetBytes(smapleStr, 0, smapleStr.Length, buffer, offset);
-                }
+                // if (sampleRate != 1.0)
+                // {
+                //     var smapleStr = string.Format(CultureInfo.InvariantCulture, "|@{0}", sampleRate);
+                //     offset += enc.GetBytes(smapleStr, 0, smapleStr.Length, buffer, offset);
+                // }
 
-                if (constantTags.Length > 0 || (tags != null && tags.Length > 0))
-                {
-                    buffer[offset++] = (byte)'|';
-                    buffer[offset++] = (byte)'#';
-                    bool hasTag = false;
+                // if (constantTags.Length > 0 || (tags != null && tags.Length > 0))
+                // {
+                //     buffer[offset++] = (byte)'|';
+                //     buffer[offset++] = (byte)'#';
+                //     bool hasTag = false;
 
-                    foreach (var tag in constantTags)
-                    {
-                        if (hasTag)
-                        {
-                            buffer[offset++] = (byte)',';
-                        }
-                        hasTag = true;
+                //     foreach (var tag in constantTags)
+                //     {
+                //         if (hasTag)
+                //         {
+                //             buffer[offset++] = (byte)',';
+                //         }
+                //         hasTag = true;
 
-                        offset += enc.GetBytes(tag, 0, tag.Length, buffer, offset);
-                    }
+                //         offset += enc.GetBytes(tag, 0, tag.Length, buffer, offset);
+                //     }
 
-                    if (tags != null)
-                    {
-                        foreach (var tag in tags)
-                        {
-                            if (hasTag)
-                            {
-                                buffer[offset++] = (byte)',';
-                            }
-                            hasTag = true;
+                //     if (tags != null)
+                //     {
+                //         foreach (var tag in tags)
+                //         {
+                //             if (hasTag)
+                //             {
+                //                 buffer[offset++] = (byte)',';
+                //             }
+                //             hasTag = true;
 
-                            offset += enc.GetBytes(tag, 0, tag.Length, buffer, offset);
-                        }
-                    }
-                }
-                //throw new NotImplementedException();
-                return new Message{ buffer = new ArraySegment<byte>(buffer, 0, offset)};
+                //             offset += enc.GetBytes(tag, 0, tag.Length, buffer, offset);
+                //         }
+                //     }
+                // }
+
+                // return new Message{ buffer = new ArraySegment<byte>(buffer, 0, offset)};
             }
 
-            public static Message GetCommand2<TCommandType, T>(string prefix, string name, T value, double sampleRate, string[] constantTags, string[] tags)
+            public static Message GetCommand<TCommandType, T>(string prefix, string name, T value, double sampleRate, string[] constantTags, string[] tags)
             where TCommandType : Metric
             {
-                if (!Poll2.TryDequeue(out var builder))
+                if (!Poll.TryDequeue(out var builder))
                 {
                     builder = new StringBuilder();
                     ++nbAlloc;
@@ -329,20 +331,66 @@ namespace StatsdClient
                     builder.Clear();
                 }
 
-                string full_name = prefix + name;
-                string unit = _commandToUnit[typeof(TCommandType)];
-                var allTags = ConcatTags(constantTags, tags);
+                if (!string.IsNullOrEmpty(prefix))
+                {
+                    builder.Append(prefix);
+                }
 
-                builder.AppendFormat(
-                    CultureInfo.InvariantCulture,
-                    "{0}:{1}|{2}{3}{4}",
-                    full_name,
-                    value,
-                    unit,
-                    sampleRate == 1.0 ? string.Empty : string.Format(CultureInfo.InvariantCulture, "|@{0}", sampleRate),
-                    allTags);
-                    throw new NotImplementedException();
-                //return new Message { buffer = builder };
+                string full_name = name;
+                string unit = _commandToUnit[typeof(TCommandType)];
+                //   var allTags = ConcatTags(constantTags, tags);
+
+                // builder.AppendFormat(
+                //     CultureInfo.InvariantCulture,
+                //     "{0}:{1}|{2}",
+                //     full_name,
+                //     value,
+                //     unit);
+
+                builder.Append(full_name);
+                builder.Append(':');
+
+                // builder.AppendFormat(
+                //     CultureInfo.InvariantCulture,
+                //     "{0}|{1}",
+                //     value,
+                //     unit);
+
+
+                 builder.AppendFormat(CultureInfo.InvariantCulture, "{0}", value);
+                 
+
+                 builder.Append('|');
+                 builder.Append(unit);
+
+                if (sampleRate != 1.0)
+                {
+                    builder.AppendFormat(CultureInfo.InvariantCulture, "|@{0}", sampleRate);
+                }
+
+                if (constantTags.Length > 0 || tags.Length > 0)
+                {
+                    builder.Append("|#");
+                    bool hasTag = false;
+                    foreach (var t in constantTags)
+                    {
+                        if (hasTag)
+                            builder.Append(',');
+                        hasTag = true;
+                        builder.Append(t);
+                    }
+
+                    foreach (var t in tags)
+                    {
+                        if (hasTag)
+                            builder.Append(',');
+                        hasTag = true;
+                        builder.Append(t);
+                    }
+                }
+
+                //    throw new NotImplementedException();
+                return new Message { buffer = builder };
             }
         }
 
