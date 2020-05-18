@@ -245,7 +245,7 @@ namespace StatsdClient
             _statsdData?.Dispose();
             _statsdData = null;
             Console.WriteLine("Nb Alloc: {0}", Statsd2.nbAlloc);
-            Console.WriteLine("Nb Alloc: {0}", Statsd2.Poll.Count);
+            Console.WriteLine("Nb Alloc42: {0}", Statsd2.Poll.Count);
 
         }
 

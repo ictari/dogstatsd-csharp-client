@@ -36,8 +36,9 @@ namespace StatsdClient.Bufferize
             return _encoding.GetBytes(message);
         }
 
-        public bool Add(ArraySegment<byte> value)
+        public bool Add(Message v)
         {
+            var value = v.buffer;
             var byteCount = value.Count;
 
             if (value.Count > Capacity)

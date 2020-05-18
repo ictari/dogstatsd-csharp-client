@@ -62,11 +62,12 @@ namespace StatsdClient
 
         public Task SendAsync(string command)
         {
-            return SocketSender.SendAsync(
-                IPEndpoint,
-                UDPSocket,
-                MaxUDPPacketSize,
-                new ArraySegment<byte>(Encoding.UTF8.GetBytes(command)));
+            throw new NotImplementedException();
+            // return SocketSender.SendAsync(
+            //     IPEndpoint,
+            //     UDPSocket,
+            //     MaxUDPPacketSize,
+            //     new Message(Encoding.UTF8.GetBytes(command)));
         }
 
         public void Dispose()

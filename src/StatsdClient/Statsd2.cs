@@ -89,16 +89,16 @@ namespace StatsdClient
 
         public void Send<TCommandType, T>(string name, T value, double sampleRate = 1.0, string[] tags = null)
             where TCommandType : Metric
-        {            
+        {
             if (RandomGenerator.ShouldSend(sampleRate))
-            {                
+            {
                 Send(Metric.GetCommand<TCommandType, T>(_prefix, name, value, sampleRate, _constantTags, tags));
                 _optionalTelemetry?.OnMetricSent();
             }
         }
 
 
-        public void Send(ArraySegment<byte> command)
+        public void Send(Message command)
         {
             try
             {
@@ -106,7 +106,7 @@ namespace StatsdClient
                 if (Commands.Count > 0)
                 {
                     Commands = new List<string>();
-                }                   
+                }
                 Udp.Send(command);
             }
             catch (Exception e)
@@ -115,7 +115,7 @@ namespace StatsdClient
             }
         }
 
-      
+
 
 
 
@@ -191,9 +191,10 @@ namespace StatsdClient
         {
         }
 
-public static int nbAlloc = 0;
+        public static int nbAlloc = 0;
 
         public static readonly ConcurrentQueue<byte[]> Poll = new ConcurrentQueue<byte[]>();
+        public static readonly ConcurrentQueue<StringBuilder> Poll2 = new ConcurrentQueue<StringBuilder>();
 
         public abstract class Metric : ICommandType
         {
@@ -208,7 +209,7 @@ public static int nbAlloc = 0;
                                                                     { typeof(Set), "s" },
                                                                 };
 
-            public static ArraySegment<byte> GetCommand<TCommandType, T>(string prefix, string name, T value, double sampleRate, string[] tags)
+            public static Message GetCommand<TCommandType, T>(string prefix, string name, T value, double sampleRate, string[] tags)
                 where TCommandType : Metric
             {
                 return GetCommand<TCommandType, T>(prefix, name, value, sampleRate, null, tags);
@@ -240,15 +241,15 @@ public static int nbAlloc = 0;
 
                 return (nbDigit + offset) - start;
             }
-          
-            public static ArraySegment<byte> GetCommand<TCommandType, T>(string prefix, string name, T value, double sampleRate, string[] constantTags, string[] tags)
+
+            public static Message GetCommand<TCommandType, T>(string prefix, string name, T value, double sampleRate, string[] constantTags, string[] tags)
                 where TCommandType : Metric
             {
-            
+
                 byte[] buffer = null;
                 if (!Poll.TryDequeue(out buffer))
                 {
-             
+
                     buffer = new byte[100];
                     ++nbAlloc;
                 }
@@ -310,8 +311,38 @@ public static int nbAlloc = 0;
                             offset += enc.GetBytes(tag, 0, tag.Length, buffer, offset);
                         }
                     }
-                }                
-                return new ArraySegment<byte>(buffer, 0, offset);
+                }
+                //throw new NotImplementedException();
+                return new Message{ buffer = new ArraySegment<byte>(buffer, 0, offset)};
+            }
+
+            public static Message GetCommand2<TCommandType, T>(string prefix, string name, T value, double sampleRate, string[] constantTags, string[] tags)
+            where TCommandType : Metric
+            {
+                if (!Poll2.TryDequeue(out var builder))
+                {
+                    builder = new StringBuilder();
+                    ++nbAlloc;
+                }
+                else
+                {
+                    builder.Clear();
+                }
+
+                string full_name = prefix + name;
+                string unit = _commandToUnit[typeof(TCommandType)];
+                var allTags = ConcatTags(constantTags, tags);
+
+                builder.AppendFormat(
+                    CultureInfo.InvariantCulture,
+                    "{0}:{1}|{2}{3}{4}",
+                    full_name,
+                    value,
+                    unit,
+                    sampleRate == 1.0 ? string.Empty : string.Format(CultureInfo.InvariantCulture, "|@{0}", sampleRate),
+                    allTags);
+                    throw new NotImplementedException();
+                //return new Message { buffer = builder };
             }
         }
 
@@ -319,14 +350,14 @@ public static int nbAlloc = 0;
         {
             private const int MaxSize = 8 * 1024;
 
-            public static ArraySegment<byte> GetCommand(string title, string text, string alertType, string aggregationKey, string sourceType, int? dateHappened, string priority, string hostname, string[] tags, bool truncateIfTooLong = false)
+            public static Message GetCommand(string title, string text, string alertType, string aggregationKey, string sourceType, int? dateHappened, string priority, string hostname, string[] tags, bool truncateIfTooLong = false)
             {
                 return GetCommand(title, text, alertType, aggregationKey, sourceType, dateHappened, priority, hostname, null, tags, truncateIfTooLong);
             }
 
-            public static ArraySegment<byte> GetCommand(string title, string text, string alertType, string aggregationKey, string sourceType, int? dateHappened, string priority, string hostname, string[] constantTags, string[] tags, bool truncateIfTooLong = false)
+            public static Message GetCommand(string title, string text, string alertType, string aggregationKey, string sourceType, int? dateHappened, string priority, string hostname, string[] constantTags, string[] tags, bool truncateIfTooLong = false)
             {
-                return new ArraySegment<byte>();
+                return new Message();
 
                 // string processedTitle = EscapeContent(title);
                 // string processedText = EscapeContent(text);
@@ -393,14 +424,14 @@ public static int nbAlloc = 0;
         {
             private const int MaxSize = 8 * 1024;
 
-            public static ArraySegment<byte> GetCommand(string name, int status, int? timestamp, string hostname, string[] tags, string serviceCheckMessage, bool truncateIfTooLong = false)
+            public static Message GetCommand(string name, int status, int? timestamp, string hostname, string[] tags, string serviceCheckMessage, bool truncateIfTooLong = false)
             {
                 return GetCommand(name, status, timestamp, hostname, null, tags, serviceCheckMessage, truncateIfTooLong);
             }
 
-            public static ArraySegment<byte> GetCommand(string name, int status, int? timestamp, string hostname, string[] constantTags, string[] tags, string serviceCheckMessage, bool truncateIfTooLong = false)
+            public static Message GetCommand(string name, int status, int? timestamp, string hostname, string[] constantTags, string[] tags, string serviceCheckMessage, bool truncateIfTooLong = false)
             {
-                return new ArraySegment<byte>();
+                return new Message();
                 // string processedName = EscapeName(name);
                 // string processedMessage = EscapeMessage(serviceCheckMessage);
 
