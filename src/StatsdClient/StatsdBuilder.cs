@@ -45,7 +45,7 @@ namespace StatsdClient
                 statsSenderData.BufferCapacity,
                 config.Advanced);
 
-            var metricSerializer = new MetricSerializer(config.Prefix, globalTags);
+            var metricSerializer = new MetricSerializer(config.Prefix, globalTags, statsSenderData.BufferCapacity);
             var metricsSender = new MetricsSender(
                 statsBufferize,
                 new RandomGenerator(),

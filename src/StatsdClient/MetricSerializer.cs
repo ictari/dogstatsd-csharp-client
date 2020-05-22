@@ -1,18 +1,47 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 
 namespace StatsdClient
 {
     internal class MetricSerializer
     {
-        private readonly string _prefix;
-        private readonly string[] _constantTags;
+        private static readonly Encoding _encoding = Encoding.UTF8;
+        private static readonly Dictionary<MetricType, string> _commandToUnit = new Dictionary<MetricType, string>
+                                                                {
+                                                                    { MetricType.Counting, "c" },
+                                                                    { MetricType.Timing, "ms" },
+                                                                    { MetricType.Gauge, "g" },
+                                                                    { MetricType.Histogram, "h" },
+                                                                    { MetricType.Distribution, "d" },
+                                                                    { MetricType.Meter, "m" },
+                                                                    { MetricType.Set, "s" },
+                                                                };
 
-        internal MetricSerializer(string prefix, string[] constantTags)
+        private readonly byte[] _optionalPrefix;
+        private readonly byte[] _optionalConstantTags;
+        private readonly string[] _constantTags; // $$$ TO REMOVE.
+        private readonly int _bufferSize;
+        public static readonly ConcurrentQueue<byte[]> _pool = new ConcurrentQueue<byte[]>();
+
+        internal MetricSerializer(string prefix, string[] constantTags, int bufferSize)
         {
-            _prefix = string.IsNullOrEmpty(prefix) ? string.Empty : prefix + ".";
+            if (!string.IsNullOrEmpty(prefix))
+            {
+                _optionalPrefix = _encoding.GetBytes(prefix + ".");
+            }
+
+            _bufferSize = bufferSize;
+
+            if (constantTags != null && constantTags.Length != 0)
+            {
+                var constantTagsStr = string.Join(",", constantTags);
+                _optionalConstantTags = _encoding.GetBytes(constantTagsStr);
+            }
+
             // copy array to prevent changes, coalesce to empty array
             _constantTags = constantTags?.ToArray() ?? Array.Empty<string>();
         }
@@ -26,10 +55,47 @@ namespace StatsdClient
         {
             return ServiceCheck.GetCommand(name, status, timestamp, hostname, _constantTags, tags, serviceCheckMessage, truncateIfTooLong);
         }
-
+public static int nbAlloc;
         public RawMetric SerializeMetric<T>(MetricType metricType, string name, T value, double sampleRate = 1.0, string[] tags = null)
         {
-            return Metric.GetCommand(metricType, _prefix, name, value, sampleRate, _constantTags, tags);
+            if (!_pool.TryDequeue(out var buffer))
+            {
+                ++nbAlloc;
+                buffer = new byte[100]; // $$ TODO
+            }
+
+            var offset = 0;
+            if (_optionalPrefix != null)
+            {
+                Append(buffer, ref offset, _optionalPrefix);
+            }
+
+            // $$ check for max size
+            offset += _encoding.GetBytes(name, 0, name.Length, buffer, offset);
+            buffer[offset++] = (byte)':';
+
+            var valueStr = string.Format(CultureInfo.InvariantCulture, "{0}", value);
+            offset += _encoding.GetBytes(valueStr, 0, valueStr.Length, buffer, offset);
+
+            buffer[offset++] = (byte)'|';
+
+            var unit = _commandToUnit[metricType];
+            offset += _encoding.GetBytes(unit, 0, unit.Length, buffer, offset);
+
+            if (sampleRate != 1.0)
+            {
+                var smapleStr = string.Format(CultureInfo.InvariantCulture, "|@{0}", sampleRate);
+                offset += _encoding.GetBytes(smapleStr, 0, smapleStr.Length, buffer, offset);
+            }
+
+            AppendTags(buffer, ref offset, tags);
+            return new RawMetric(buffer, offset);
+        }
+
+        private static void Append(byte[] buffer, ref int offset, byte[] value)
+        {
+            value.CopyTo(buffer, offset);
+            offset += value.Length;
         }
 
         private static string EscapeContent(string content)
@@ -60,33 +126,34 @@ namespace StatsdClient
             return str.Substring(0, str.Length - overage);
         }
 
-        public abstract class Metric
+        private void AppendTags(byte[] buffer, ref int offset, string[] tags)
         {
-            private static readonly Dictionary<MetricType, string> _commandToUnit = new Dictionary<MetricType, string>
-                                                                {
-                                                                    { MetricType.Counting, "c" },
-                                                                    { MetricType.Timing, "ms" },
-                                                                    { MetricType.Gauge, "g" },
-                                                                    { MetricType.Histogram, "h" },
-                                                                    { MetricType.Distribution, "d" },
-                                                                    { MetricType.Meter, "m" },
-                                                                    { MetricType.Set, "s" },
-                                                                };
+            tags = tags ?? Array.Empty<string>();
 
-            public static RawMetric GetCommand<T>(MetricType metricType, string prefix, string name, T value, double sampleRate, string[] constantTags, string[] tags)
+            if (_optionalConstantTags == null && tags.Length == 0)
             {
-                string full_name = prefix + name;
-                string unit = _commandToUnit[metricType];
-                var allTags = ConcatTags(constantTags, tags);
+                return;
+            }
 
-                return new RawMetric(string.Format(
-                    CultureInfo.InvariantCulture,
-                    "{0}:{1}|{2}{3}{4}",
-                    full_name,
-                    value,
-                    unit,
-                    sampleRate == 1.0 ? string.Empty : string.Format(CultureInfo.InvariantCulture, "|@{0}", sampleRate),
-                    allTags));
+            buffer[offset++] = (byte)'|';
+            buffer[offset++] = (byte)'#';
+
+            bool hasTag = false;
+            if (_optionalConstantTags != null)
+            {
+                Append(buffer, ref offset, _optionalConstantTags);
+                hasTag = true;
+            }
+
+            foreach (var tag in tags)
+            {
+                if (hasTag)
+                {
+                    buffer[offset++] = (byte)',';
+                }
+
+                hasTag = true;
+                offset += _encoding.GetBytes(tag, 0, tag.Length, buffer, offset);
             }
         }
 
