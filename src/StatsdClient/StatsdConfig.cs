@@ -16,7 +16,7 @@ namespace StatsdClient
         /// <summary>
         /// The default UDP maximum packet size.
         /// </summary>
-        public const int DefaultStatsdMaxUDPPacketSize = 8096;
+        public const int DefaultStatsdMaxUDPPacketSize = 512;
 
         /// <summary>
         /// The name of the environment variable defining the global tags to be applied to every metric, event, and service check.

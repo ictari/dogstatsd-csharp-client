@@ -241,7 +241,6 @@ namespace StatsdClient
         {
             _statsdData?.Dispose();
             _statsdData = null;
-            Console.WriteLine(MetricSerializer.nbAlloc);
         }
     }
 }
