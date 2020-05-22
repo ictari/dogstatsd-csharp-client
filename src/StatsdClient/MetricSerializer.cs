@@ -46,18 +46,17 @@ namespace StatsdClient
         private static string ConcatTags(string[] constantTags, string[] tags)
         {
             // avoid dealing with null arrays
-            //constantTags = constantTags ?? Array.Empty<string>();
-            //tags = tags ?? Array.Empty<string>();
+            constantTags = constantTags ?? Array.Empty<string>();
+            tags = tags ?? Array.Empty<string>();
 
-            //if (constantTags.Length == 0 && tags.Length == 0)
-            //{
-            //    return string.Empty;
-            //}
+            if (constantTags.Length == 0 && tags.Length == 0)
+            {
+               return string.Empty;
+            }
 
-            //var allTags = constantTags.Concat(tags);
-            //string concatenatedTags = string.Join(",", allTags);
-            //return $"|#{concatenatedTags}";
-            return "";
+            var allTags = constantTags.Concat(tags);
+            string concatenatedTags = string.Join(",", allTags);
+            return $"|#{concatenatedTags}";            
         }
 
         private static string TruncateOverage(string str, int overage)
@@ -93,18 +92,12 @@ namespace StatsdClient
                 }
                                 
                 string unit = _commandToUnit[metricType];
-                //var allTags = ConcatTags(constantTags, tags);
 
-                // builder.AppendFormat(
-                //     CultureInfo.InvariantCulture,
-                //     "{0}{1}:{2}|{3}",
-                //     prefix,
-                //     name,                    
-                //     value,
-                //     unit);
                  builder.Append(prefix);
                 builder.Append(name);
+                builder.Append(':');
                 builder.AppendFormat(CultureInfo.InvariantCulture, "{0}", value);
+                builder.Append('|');
                 builder.Append(unit);
 
                 if (sampleRate != 1.0)
@@ -201,7 +194,9 @@ namespace StatsdClient
                     }
                 }
 
-                return new RawMetric();
+                var builder = new StringBuilder();
+                builder.Append(result);
+                return new RawMetric(builder);
             }
         }
 
@@ -257,7 +252,9 @@ namespace StatsdClient
                     return GetCommand(name, status, timestamp, hostname, tags, truncMessage, true);
                 }
 
-                return new RawMetric();
+                 var builder = new StringBuilder();
+                builder.Append(result);
+                return new RawMetric(builder);
             }
 
             // Service check name string, shouldn’t contain any |
