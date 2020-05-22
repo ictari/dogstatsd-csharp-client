@@ -87,18 +87,25 @@ namespace StatsdClient
                 if (!_pool.TryDequeue(out var builder))
                 {
                     builder = new StringBuilder();
+                } else 
+                {
+                    builder.Clear();
                 }
                                 
                 string unit = _commandToUnit[metricType];
                 //var allTags = ConcatTags(constantTags, tags);
 
-                builder.AppendFormat(
-                    CultureInfo.InvariantCulture,
-                    "{0}{1}:{2}|{3}",
-                    prefix,
-                    name,                    
-                    value,
-                    unit);
+                // builder.AppendFormat(
+                //     CultureInfo.InvariantCulture,
+                //     "{0}{1}:{2}|{3}",
+                //     prefix,
+                //     name,                    
+                //     value,
+                //     unit);
+                 builder.Append(prefix);
+                builder.Append(name);
+                builder.AppendFormat(CultureInfo.InvariantCulture, "{0}", value);
+                builder.Append(unit);
 
                 if (sampleRate != 1.0)
                 {
