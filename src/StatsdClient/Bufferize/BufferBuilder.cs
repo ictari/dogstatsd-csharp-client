@@ -36,11 +36,14 @@ namespace StatsdClient.Bufferize
             return _encoding.GetBytes(message);
         }
 
-        public bool Add(RawMetric value)
-        {
-            var buffer = value.Buffer;
-            var byteCount = _encoding.GetByteCount(buffer);
+        char[] buffChar = new char[8096];
 
+        public bool Add(RawMetric metric)
+        {
+            var value = metric.Buffer;
+            value.CopyTo(0, buffChar, 0, value.Length);
+            var byteCount = _encoding.GetByteCount(buffChar, 0, value.Length);
+            
             if (byteCount > Capacity)
             {
                 return false;
@@ -63,7 +66,7 @@ namespace StatsdClient.Bufferize
             }
 
             // GetBytes requires the buffer to be big enough otherwise it throws, that is why we use GetByteCount.
-            Length += _encoding.GetBytes(buffer, 0, buffer.Length, _buffer, Length);
+            Length += _encoding.GetBytes(buffChar, 0, value.Length, _buffer, Length);
             return true;
         }
 

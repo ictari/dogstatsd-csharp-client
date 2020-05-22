@@ -62,7 +62,7 @@ namespace StatsdClient.Bufferize
                 {
                     throw new InvalidOperationException($"The metric size exceeds the buffer capacity: {metric}");
                 }
-
+                MetricSerializer._pool.Enqueue(metric.Buffer);
                 _stopwatch = null;
             }
 

@@ -1,12 +1,14 @@
+using System.Text;
+
 namespace StatsdClient
 {
     internal struct RawMetric
     {
-        public RawMetric(string buffer)
+        public RawMetric(StringBuilder buffer)
         {
             Buffer = buffer;
         }
 
-        public string Buffer { get; private set; }
+        public StringBuilder Buffer { get; private set; }
     }
 }

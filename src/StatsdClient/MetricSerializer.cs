@@ -1,30 +1,34 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 
 namespace StatsdClient
 {
     internal class MetricSerializer
     {
         private readonly string _prefix;
-        private readonly string[] _constantTags;
+        private readonly string[] _constantTagsArray;
+        private readonly string _constantTags;
 
         internal MetricSerializer(string prefix, string[] constantTags)
         {
             _prefix = string.IsNullOrEmpty(prefix) ? string.Empty : prefix + ".";
             // copy array to prevent changes, coalesce to empty array
-            _constantTags = constantTags?.ToArray() ?? Array.Empty<string>();
+            _constantTagsArray = constantTags?.ToArray() ?? new string[]{ };
+            _constantTags = constantTags != null ? string.Join(",", constantTags) : string.Empty;
         }
 
         public RawMetric SerializeEvent(string title, string text, string alertType = null, string aggregationKey = null, string sourceType = null, int? dateHappened = null, string priority = null, string hostname = null, string[] tags = null, bool truncateIfTooLong = false)
         {
-            return Event.GetCommand(title, text, alertType, aggregationKey, sourceType, dateHappened, priority, hostname, _constantTags, tags, truncateIfTooLong);
+            return Event.GetCommand(title, text, alertType, aggregationKey, sourceType, dateHappened, priority, hostname, _constantTagsArray, tags, truncateIfTooLong);
         }
 
         public RawMetric SerializeServiceCheck(string name, int status, int? timestamp = null, string hostname = null, string[] tags = null, string serviceCheckMessage = null, bool truncateIfTooLong = false)
         {
-            return ServiceCheck.GetCommand(name, status, timestamp, hostname, _constantTags, tags, serviceCheckMessage, truncateIfTooLong);
+            return ServiceCheck.GetCommand(name, status, timestamp, hostname, _constantTagsArray, tags, serviceCheckMessage, truncateIfTooLong);
         }
 
         public RawMetric SerializeMetric<T>(MetricType metricType, string name, T value, double sampleRate = 1.0, string[] tags = null)
@@ -42,23 +46,26 @@ namespace StatsdClient
         private static string ConcatTags(string[] constantTags, string[] tags)
         {
             // avoid dealing with null arrays
-            constantTags = constantTags ?? Array.Empty<string>();
-            tags = tags ?? Array.Empty<string>();
+            //constantTags = constantTags ?? Array.Empty<string>();
+            //tags = tags ?? Array.Empty<string>();
 
-            if (constantTags.Length == 0 && tags.Length == 0)
-            {
-                return string.Empty;
-            }
+            //if (constantTags.Length == 0 && tags.Length == 0)
+            //{
+            //    return string.Empty;
+            //}
 
-            var allTags = constantTags.Concat(tags);
-            string concatenatedTags = string.Join(",", allTags);
-            return $"|#{concatenatedTags}";
+            //var allTags = constantTags.Concat(tags);
+            //string concatenatedTags = string.Join(",", allTags);
+            //return $"|#{concatenatedTags}";
+            return "";
         }
 
         private static string TruncateOverage(string str, int overage)
         {
             return str.Substring(0, str.Length - overage);
         }
+
+        public static ConcurrentQueue<StringBuilder> _pool = new ConcurrentQueue<StringBuilder>();
 
         public abstract class Metric
         {
@@ -73,20 +80,49 @@ namespace StatsdClient
                                                                     { MetricType.Set, "s" },
                                                                 };
 
-            public static RawMetric GetCommand<T>(MetricType metricType, string prefix, string name, T value, double sampleRate, string[] constantTags, string[] tags)
-            {
-                string full_name = prefix + name;
-                string unit = _commandToUnit[metricType];
-                var allTags = ConcatTags(constantTags, tags);
 
-                return new RawMetric(string.Format(
+
+            public static RawMetric GetCommand<T>(MetricType metricType, string prefix, string name, T value, double sampleRate, string constantTags, string[] tags)
+            {
+                if (!_pool.TryDequeue(out var builder))
+                {
+                    builder = new StringBuilder();
+                }
+                                
+                string unit = _commandToUnit[metricType];
+                //var allTags = ConcatTags(constantTags, tags);
+
+                builder.AppendFormat(
                     CultureInfo.InvariantCulture,
-                    "{0}:{1}|{2}{3}{4}",
-                    full_name,
+                    "{0}{1}:{2}|{3}",
+                    prefix,
+                    name,                    
                     value,
-                    unit,
-                    sampleRate == 1.0 ? string.Empty : string.Format(CultureInfo.InvariantCulture, "|@{0}", sampleRate),
-                    allTags));
+                    unit);
+
+                if (sampleRate != 1.0)
+                {
+                    builder.AppendFormat(CultureInfo.InvariantCulture, "|@{0}", sampleRate);
+                }
+
+                if (!string.IsNullOrEmpty(constantTags) || (tags != null && tags.Length > 0))
+                {
+                    builder.Append("|#");
+                    builder.Append(constantTags);
+                    bool hasTag = !string.IsNullOrEmpty(constantTags);
+                    foreach (var tag in tags)
+                    {
+                        if (hasTag)
+                        {
+                            builder.Append(',');
+                        }
+
+                        hasTag = true;
+                        builder.Append(tag);
+                    }
+                }
+                
+                return new RawMetric(builder);
             }
         }
 
@@ -158,7 +194,7 @@ namespace StatsdClient
                     }
                 }
 
-                return new RawMetric(result);
+                return new RawMetric();
             }
         }
 
@@ -214,7 +250,7 @@ namespace StatsdClient
                     return GetCommand(name, status, timestamp, hostname, tags, truncMessage, true);
                 }
 
-                return new RawMetric(result);
+                return new RawMetric();
             }
 
             // Service check name string, shouldn’t contain any |
