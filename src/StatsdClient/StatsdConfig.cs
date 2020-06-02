@@ -71,6 +71,11 @@ namespace StatsdClient
         public string StatsdServerName { get; set; }
 
         /// <summary>
+        /// Gets or Sets the pipe name. Internal usage only.
+        /// </summary>
+        public string PipeName { get; set; }
+
+        /// <summary>
         /// Gets or sets the port of the targeted StatsD server.
         /// </summary>
         /// <value>The port of the targeted StatsD server.</value>

@@ -37,5 +37,10 @@ namespace StatsdClient.Bufferize
         {
             return new Telemetry(assemblyVersion, flushInterval, transport, globalTags);
         }
+
+        public ITransport CreateNamedPipeTransport(string pipeName)
+        {
+            return new NamedPipeTransport(pipeName);
+        }
     }
 }

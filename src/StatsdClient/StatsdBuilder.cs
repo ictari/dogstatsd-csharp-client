@@ -142,8 +142,16 @@ namespace StatsdClient
             }
             else
             {
-                transportData.Sender = CreateUDPTransport(config, statsdServerName);
-                transportData.BufferCapacity = config.StatsdMaxUDPPacketSize;
+                if (!string.IsNullOrEmpty(config.PipeName))
+                {
+                    transportData.Sender = _factory.CreateNamedPipeTransport(config.PipeName);
+                    transportData.BufferCapacity = config.StatsdMaxUDPPacketSize;
+                }
+                else
+                {
+                    transportData.Sender = CreateUDPTransport(config, statsdServerName);
+                    transportData.BufferCapacity = config.StatsdMaxUDPPacketSize;
+                }
             }
 
             return transportData;
