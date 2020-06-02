@@ -6,6 +6,7 @@ namespace StatsdClient
     {
         UDS,
         UDP,
+        NamedPipe,
     }
 
     internal interface ITransport : IDisposable

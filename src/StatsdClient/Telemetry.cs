@@ -43,6 +43,7 @@ namespace StatsdClient
             {
                 case TransportType.UDP: transportStr = "udp"; break;
                 case TransportType.UDS: transportStr = "uds"; break;
+                case TransportType.NamedPipe: transportStr = "named_pipe"; break; // $$ consider moving to ITransport
                 default: transportStr = transport.TransportType.ToString(); break;
             }
 
