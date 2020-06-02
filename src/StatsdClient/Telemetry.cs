@@ -14,7 +14,7 @@ namespace StatsdClient
         private static string _telemetryPrefix = "datadog.dogstatsd.client.";
         private readonly Timer _optionalTimer;
         private readonly string[] _optionalTags;
-        private readonly ITransport _optionalStatsSender;
+        private readonly ITransport _optionalTransport;
 
         private int _metricsSent;
         private int _eventsSent;
@@ -36,7 +36,7 @@ namespace StatsdClient
             ITransport transport,
             string[] globalTags)
         {
-            _optionalStatsSender = transport;
+            _optionalTransport = transport;
 
             string transportStr;
             switch (transport.TransportType)
@@ -148,7 +148,7 @@ namespace StatsdClient
 
         private void SendMetric(string metricName, int value)
         {
-            if (_optionalStatsSender != null)
+            if (_optionalTransport != null)
             {
                 var message = Statsd.Metric.GetCommand<Statsd.Counting, int>(
                     string.Empty,
@@ -157,7 +157,7 @@ namespace StatsdClient
                     1.0,
                     _optionalTags);
                 var bytes = BufferBuilder.GetBytes(message);
-                _optionalStatsSender.Send(bytes, bytes.Length);
+                _optionalTransport.Send(bytes, bytes.Length);
             }
         }
     }
