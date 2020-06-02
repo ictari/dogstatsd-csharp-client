@@ -6,7 +6,7 @@ using Mono.Unix;
 
 namespace StatsdClient
 {
-    internal class UnixDomainSocketTransport : IStatsSender
+    internal class UnixDomainSocketTransport : ITransport
     {
         private static readonly TimeSpan NoBufferSpaceAvailableWait = TimeSpan.FromMilliseconds(10);
         private readonly Socket _socket;

@@ -4,7 +4,7 @@ using System.Net.Sockets;
 
 namespace StatsdClient
 {
-    internal class UDPTransport : IStatsSender
+    internal class UDPTransport : ITransport
     {
         private readonly Socket _socket;
         private readonly IPEndPoint _endPoint;

@@ -1,19 +1,19 @@
 namespace StatsdClient.Bufferize
 {
     /// <summary>
-    /// BufferBuilderHandler forwards metrics to IStatsSender and update telemetry.
+    /// BufferBuilderHandler forwards metrics to ITransport and update telemetry.
     /// </summary>
     internal class BufferBuilderHandler : IBufferBuilderHandler
     {
         private readonly Telemetry _telemetry;
-        private readonly IStatsSender _statsSender;
+        private readonly ITransport _statsSender;
 
         public BufferBuilderHandler(
             Telemetry telemetry,
-            IStatsSender statsSender)
+            ITransport transport)
         {
             _telemetry = telemetry;
-            _statsSender = statsSender;
+            _statsSender = transport;
         }
 
         public void Handle(byte[] buffer, int length)
