@@ -29,11 +29,11 @@ namespace StatsdClient
                     ? config.StatsdServerName
                     : Environment.GetEnvironmentVariable(StatsdConfig.DD_AGENT_HOST_ENV_VAR);
 
-            if (string.IsNullOrEmpty(statsdServerName))
+            if (string.IsNullOrEmpty(statsdServerName) && string.IsNullOrEmpty(config.PipeName))
             {
                 throw new ArgumentNullException(
                     $"{nameof(config)}.{nameof(config.StatsdServerName)} and"
-                    + $" {StatsdConfig.DD_AGENT_HOST_ENV_VAR} environment variable not set");
+                    + $" {StatsdConfig.DD_AGENT_HOST_ENV_VAR} environment variable not set"); // $$ Add name pipe
             }
 
             var statsSenderData = CreateTransport(config, statsdServerName);
@@ -131,7 +131,7 @@ namespace StatsdClient
         {
             var transportData = new TransportData();
 
-            if (statsdServerName.StartsWith(UnixDomainSocketPrefix))
+            if (!string.IsNullOrEmpty(statsdServerName) && statsdServerName.StartsWith(UnixDomainSocketPrefix))
             {
                 statsdServerName = statsdServerName.Substring(UnixDomainSocketPrefix.Length);
                 var endPoint = new UnixEndPoint(statsdServerName);

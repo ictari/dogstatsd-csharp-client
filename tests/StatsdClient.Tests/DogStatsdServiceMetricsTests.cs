@@ -21,7 +21,7 @@ namespace Tests
             config.Advanced.MaxBlockDuration = TimeSpan.FromSeconds(3);
             config.Advanced.MaxMetricsInAsyncQueue = metricToSendCount / 10;
 
-            SendAndCheckMetricsAreReceived(config, metricToSendCount);
+            SendAndCheckMetricsAreReceived(() => new SocketServer(config), config, metricToSendCount);
         }
 
 #if !OS_WINDOWS
@@ -40,16 +40,36 @@ namespace Tests
                 config.Advanced.UDSBufferFullBlockDuration = TimeSpan.FromSeconds(3);
                 config.Advanced.MaxMetricsInAsyncQueue = metricToSendCount / 10;
 
-                SendAndCheckMetricsAreReceived(config, metricToSendCount);
+                SendAndCheckMetricsAreReceived(
+                    () => new SocketServer(config),
+                    config,
+                    metricToSendCount);
             }
         }
 #endif
 
-        private static void SendAndCheckMetricsAreReceived(StatsdConfig config, int metricToSendCount)
+        [Test]
+        public void NamePipe()
+        {
+            var metricToSendCount = 10;
+
+            var config = new StatsdConfig
+            {
+                PipeName = "TestPipe",
+            };
+            config.Advanced.MaxMetricsInAsyncQueue = metricToSendCount / 10;
+
+            SendAndCheckMetricsAreReceived(
+                () => new NamedPipeServer(config.PipeName),
+                config,
+                metricToSendCount);
+        }
+
+        private static void SendAndCheckMetricsAreReceived(Func<AbstractServer> serverFactory, StatsdConfig config, int metricToSendCount)
         {
             using (var service = new DogStatsdService())
             {
-                using (var server = new SocketServer(config))
+                using (var server = serverFactory())
                 {
                     service.Configure(config);
                     for (int i = 0; i < metricToSendCount; ++i)

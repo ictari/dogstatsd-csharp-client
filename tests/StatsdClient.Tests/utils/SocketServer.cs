@@ -41,6 +41,12 @@ namespace Tests.Utils
             Start(bufferSize);
         }
 
+        public override void Dispose()
+        {
+            base.Dispose();
+            _server.Dispose();
+        }
+
         protected override int Read(byte[] buffer)
         {
             return _server.Receive(buffer);
@@ -50,12 +56,6 @@ namespace Tests.Utils
         {
             var socketException = e as SocketException;
             return socketException != null && socketException.SocketErrorCode == SocketError.TimedOut;
-        }
-
-        public override void Dispose()
-        {
-            base.Dispose();
-            _server.Dispose();
         }
     }
 }

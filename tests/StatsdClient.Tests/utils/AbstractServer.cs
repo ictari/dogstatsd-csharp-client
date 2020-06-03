@@ -37,10 +37,16 @@ namespace Tests.Utils
         protected abstract int Read(byte[] buffer);
 
         protected abstract bool IsTimeoutException(Exception e);
-        
+
+        protected virtual void OnServerStarting()
+        {
+            // Nothing by default
+        }
+
         private void ReadFromServer(int bufferSize)
         {
             var buffer = new byte[bufferSize];
+            OnServerStarting();
 
             while (true)
             {
