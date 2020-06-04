@@ -51,12 +51,13 @@ namespace Tests
         [Test]
         public void NamePipe()
         {
-            var metricToSendCount = 10;
+            var metricToSendCount = 100 * 1000;
 
             var config = new StatsdConfig
             {
                 PipeName = "TestPipe",
             };
+            config.Advanced.MaxBlockDuration = TimeSpan.FromSeconds(3);
             config.Advanced.MaxMetricsInAsyncQueue = metricToSendCount / 10;
 
             SendAndCheckMetricsAreReceived(

@@ -1,9 +1,5 @@
-using System;
-using System.IO;
 using System.IO.Pipes;
-using System.Net.Sockets;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace StatsdClient
 {
@@ -23,32 +19,14 @@ namespace StatsdClient
         {
             lock (_lock)
             {
-                // Must be outside the loop to avoid GC issue.
-                var cts = new CancellationTokenSource();
-                bool isConnected = false;
-                while (true)
+                if (!_namedPipe.IsConnected)
                 {
-                    try
-                    {
-                        cts.CancelAfter(100);
-                        _namedPipe.WriteAsync(buffer, 0, length, cts.Token);
-                        break;
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        return false;
-                    }
-                    catch (InvalidOperationException e)
-                    {
-                        if (isConnected)
-                        {
-                            throw;
-                        }
-                        // $$ improved
-                        _namedPipe.Connect(1000); // $$ there is a connectAsync
-                        isConnected = true;
-                    }
+                    _namedPipe.Connect(1000);
                 }
+
+                var cts = new CancellationTokenSource();
+                cts.CancelAfter(300);
+                _namedPipe.WriteAsync(buffer, 0, length, cts.Token).Wait();
             }
 
             return true;
@@ -56,6 +34,11 @@ namespace StatsdClient
 
         public void Dispose()
         {
+            if (_namedPipe.IsConnected)
+            {
+                _namedPipe.WaitForPipeDrain();
+            }
+
             _namedPipe.Dispose();
         }
     }

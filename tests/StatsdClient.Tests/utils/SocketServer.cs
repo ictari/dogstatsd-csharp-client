@@ -47,15 +47,16 @@ namespace Tests.Utils
             _server.Dispose();
         }
 
-        protected override int Read(byte[] buffer)
+        protected override int? Read(byte[] buffer)
         {
-            return _server.Receive(buffer);
-        }
-
-        protected override bool IsTimeoutException(Exception e)
-        {
-            var socketException = e as SocketException;
-            return socketException != null && socketException.SocketErrorCode == SocketError.TimedOut;
+            try
+            {
+                return _server.Receive(buffer);
+            }
+            catch (SocketException e) when (e.SocketErrorCode == SocketError.TimedOut)
+            {
+                return null;
+            }
         }
     }
 }

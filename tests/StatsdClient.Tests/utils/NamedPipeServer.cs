@@ -1,6 +1,8 @@
 using System;
+using System.IO;
 using System.IO.Pipes;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Tests.Utils
 {
@@ -10,7 +12,7 @@ namespace Tests.Utils
 
         public NamedPipeServer(string pipeName)
         {
-            _pipeServer = new NamedPipeServerStream(pipeName, PipeDirection.Out);
+            _pipeServer = new NamedPipeServerStream(pipeName, PipeDirection.In);
             Start(1000);
         }
 
@@ -20,21 +22,21 @@ namespace Tests.Utils
             _pipeServer.Dispose();
         }
 
-        protected override bool IsTimeoutException(Exception e)
+        protected override int? Read(byte[] buffer)
         {
-            return true; // $$ TODO
-        }
+            if (!_pipeServer.IsConnected)
+            {
+                try
+                {
+                    _pipeServer.WaitForConnection();
+                }
+                catch (IOException)
+                {
+                    return null;
+                }
+            }
 
-        protected override void OnServerStarting()
-        {
-            _pipeServer.WaitForConnection();
-        }
-
-        protected override int Read(byte[] buffer)
-        {
-            var cts = new CancellationTokenSource();
-            cts.CancelAfter(1000);
-            return _pipeServer.ReadAsync(buffer, 0, buffer.Length, cts.Token).Result;
+            return _pipeServer.Read(buffer, 0, buffer.Length);
         }
     }
 }

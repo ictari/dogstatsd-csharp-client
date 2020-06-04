@@ -14,7 +14,7 @@ namespace Tests.Utils
         private volatile bool _shutdown = false;
 
         public virtual void Dispose()
-        {        
+        {
             Stop();
         }
 
@@ -34,31 +34,23 @@ namespace Tests.Utils
             _receiver = Task.Run(() => ReadFromServer(bufferSize));
         }
 
-        protected abstract int Read(byte[] buffer);
-
-        protected abstract bool IsTimeoutException(Exception e);
-
-        protected virtual void OnServerStarting()
-        {
-            // Nothing by default
-        }
+        protected abstract int? Read(byte[] buffer);
 
         private void ReadFromServer(int bufferSize)
         {
             var buffer = new byte[bufferSize];
-            OnServerStarting();
 
             while (true)
             {
-                try
+                var count = Read(buffer);
+                if (count.HasValue)
                 {
-                    var count = Read(buffer);
-                    var message = System.Text.Encoding.UTF8.GetString(buffer, 0, count);
+                    var message = System.Text.Encoding.UTF8.GetString(buffer, 0, count.Value);
                     _messagesReceived.AddRange(message.Split("\n", StringSplitOptions.RemoveEmptyEntries));
                 }
-                catch (Exception e)
+                else
                 {
-                    if (IsTimeoutException(e) & _shutdown)
+                    if (_shutdown)
                     {
                         _serverStop.Set();
                         return;
